@@ -1,56 +1,78 @@
 # 🛡️ Threat Detection Lab with Wazuh SIEM/EDR
 
-Repositori ini mendokumentasikan implementasi dan simulasi deteksi ancaman keamanan siber menggunakan **Wazuh SIEM/EDR** di lingkungan virtual. Proyek ini mencakup konfigurasi deteksi kustom, pemantauan integritas file (FIM), dan analisis serangan aplikasi web secara *real-time*.
+Repositori ini mendokumentasikan implementasi dan simulasi deteksi ancaman menggunakan **Wazuh SIEM/EDR**. Fokus utama lab ini adalah menganalisis metode serangan dan bagaimana sistem keamanan merespons setiap aktivitas mencurigakan secara *real-time*.
 
-## 🏗️ Infrastruktur Lab
-* **SIEM Manager**: Wazuh Manager (Ubuntu 22.04) - IP: `192.168.15.135`
-* **Target Server**: Ubuntu 22.04 (Apache & SSH) - IP: `192.168.15.139`
-* **Attacker Machine**: Kali Linux - IP: `192.168.15.138`
+## 🏗️ Infrastruktur & Persiapan
+Sebelum memulai simulasi, dipastikan seluruh layanan dan agent dalam kondisi aktif.
 
-### Deployment Status
-Agent `lab-server` berhasil diinstal dan terhubung ke dashboard dengan status **Active**.
+* **Agent Status**: Dashboard menunjukkan Agent `lab-server` aktif.
+* **Service Check**: Layanan Apache dan SSH dipastikan berjalan pada target.
+* **Attack Surface**: Halaman web yang rentan disiapkan untuk simulasi.
+
 ![Agent Status](img/agent-active-status.png)
+*Gambar: Verifikasi koneksi Agent ke Manager*
 
 ---
 
-## ⚔️ Security Simulation & Detection Analysis
+## ⚔️ Metode Serangan 1: Remote Code Execution (RCE)
+Serangan ini memanfaatkan celah *Command Injection* pada aplikasi web.
 
-### 1. Remote Code Execution (RCE) - Command Injection
-Mendeteksi upaya eksekusi perintah sistem melalui parameter URL pada web server.
+### 🛠️ Langkah Eksekusi (Attacker)
+1. Penyerang mencoba menjalankan perintah sistem melalui parameter URL.
+2. Berhasil mendapatkan akses ke file sensitif `/etc/passwd`.
 
-* **Metode Serangan**: Mengirimkan payload `cat /etc/passwd` menggunakan `curl`.
-* **Hasil Eksploitasi**: Penyerang berhasil membaca data user sistem.
-* **Deteksi SOC**: Implementasi **Custom Rule ID: 100005** menghasilkan alert **Level 12 (High Severity)**.
+![Attacker Command](img/attacker-kali-cmd.png)
+![Success Evidence](img/rce-success-evidence.png)
+*Gambar: Eksekusi payload dari terminal Kali Linux*
+
+### 🛡️ Analisis Deteksi (SOC)
+1. **Detection Logic**: Menggunakan Custom Rule ID 100005.
+2. **Timeline Analysis**: Urutan kejadian tercatat lengkap di dashboard.
 
 ![RCE Detail](img/wazuh-alert-rce-detail.png)
-![RCE Timeline](img/security-events-timeline(rce).png)
-
-### 2. Brute Force Attack - SSH
-Mendeteksi upaya login paksa menggunakan kamus password melalui protokol SSH.
-
-* **Metode Serangan**: Menggunakan **Hydra** untuk menyerang user `envy`.
-* **Analisis Alert**: Terdeteksi lonjakan kegagalan otentikasi (spike) pada dashboard.
-* **Detail Teknis**: Log menunjukkan kegagalan otentikasi pada level sistem (PAM).
-
-![SSH Spike](img/wazuh-alert-ssh-timeline.png)
-![PAM Failure](img/ssh-pam-auth-failure.png)
-
-### 3. File Integrity Monitoring (FIM)
-Memantau perubahan dan penambahan file pada direktori web server secara instan.
-
-* **Konfigurasi**: Mengaktifkan mode `realtime="yes"` pada direktori `/var/www/html/`.
-* **Skenario**: Deteksi pembuatan file mencurigakan `test-fim.txt` oleh penyerang.
-* **Hasil Deteksi**: Alert **Rule 554 (File added to the system)** terekam secara otomatis.
-
-![FIM Alert](img/wazuh-fim-alert-added.png)
+![Security Timeline](img/security-events-timeline(rce).png)
 
 ---
 
-## ⚙️ Configuration & Scripts
-Detail teknis untuk mereplikasi lab ini tersedia di folder berikut:
-* [**configs/**](configs/): Berisi `local_rules.xml` (Logic Deteksi) dan `ossec.conf` (FIM Config).
-* [**scripts/**](scripts/): Berisi `vulnerable.php` (Vulnerability Simulation) dan `attack_commands.sh` (Attack Command List).
+## 🔑 Metode Serangan 2: SSH Brute Force
+Percobaan masuk ke sistem menggunakan metode menebak password secara masif.
+
+### 🛠️ Langkah Eksekusi (Attacker)
+Menggunakan alat **Hydra** untuk menyerang layanan SSH pada target. Proses dihentikan setelah ribuan percobaan dilakukan.
+
+![Hydra Command](img/ssh-bruteforce-cmd.png)
+![Hydra Finish](img/ssh-bruteforce-finish.png)
+
+### 🛡️ Analisis Deteksi (SOC)
+1. **Alert Spike**: Terlihat lonjakan aktivitas pada grafik dashboard.
+2. **Detailed Logs**: Detail kegagalan login terekam pada level user dan modul PAM.
+
+![SSH Spike](img/wazuh-alert-ssh-timeline.png)
+![PAM Detail](img/ssh-pam-auth-failure.png)
+
+---
+
+## 🔍 Metode Serangan 3: Post-Exploitation (FIM)
+Mendeteksi perubahan integritas file setelah penyerang berhasil masuk.
+
+### 🛠️ Langkah Eksekusi (Attacker)
+Penyerang membuat file baru `test-fim.txt` di direktori web server.
+
+![FIM Touch](img/fim-test-execution.png)
+
+### 🛡️ Analisis Deteksi (SOC)
+Sistem mendeteksi penambahan file secara *real-time*. Detail log JSON menunjukkan path file dan tipe event.
+
+![FIM Alert](img/wazuh-fim-alert-added.png)
+![FIM JSON](img/fim-alert-json-detail.png)
+
+---
+
+## ⚙️ Bukti Konfigurasi (Internal)
+Berikut adalah konfigurasi yang menjamin deteksi di atas berjalan:
+* **Custom Rule**: [img/wazuh-custom-rule-config.png](img/wazuh-custom-rule-config.png)
+* **Agent Config**: [img/wazuh-agent-fim-config.png](img/wazuh-agent-fim-config.png)
 
 ---
 **Author**: Muhamad Yusril Malakaini
-**Date**: February 2026
+**Year**: 2026
