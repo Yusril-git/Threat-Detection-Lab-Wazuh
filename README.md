@@ -1,59 +1,56 @@
 # 🛡️ Threat Detection Lab with Wazuh SIEM/EDR
 
-Repositori ini mendokumentasikan implementasi, konfigurasi, dan simulasi deteksi ancaman menggunakan **Wazuh SIEM/EDR**. Proyek ini dirancang untuk mensimulasikan alur kerja seorang **SOC Analyst** dalam mendeteksi serangan aplikasi web, upaya akses ilegal (Brute Force), dan pemantauan integritas file (FIM) secara *real-time*.
+Repositori ini mendokumentasikan implementasi dan simulasi deteksi ancaman keamanan siber menggunakan **Wazuh SIEM/EDR** di lingkungan virtual. Proyek ini mencakup konfigurasi deteksi kustom, pemantauan integritas file (FIM), dan analisis serangan aplikasi web secara *real-time*.
 
 ## 🏗️ Infrastruktur Lab
 * **SIEM Manager**: Wazuh Manager (Ubuntu 22.04) - IP: `192.168.15.135`
-* **Target Server**: Ubuntu 22.04 with Apache & SSH - IP: `192.168.15.139`
-* **Attacker**: Kali Linux - IP: `192.168.15.138`
+* **Target Server**: Ubuntu 22.04 (Apache & SSH) - IP: `192.168.15.139`
+* **Attacker Machine**: Kali Linux - IP: `192.168.15.138`
 
 ### Deployment Status
-Agent `lab-server` telah dideploy dan terhubung ke dashboard manager dengan status **Active**.
+Agent `lab-server` berhasil diinstal dan terhubung ke dashboard dengan status **Active**.
 ![Agent Status](img/agent-active-status.png)
 
 ---
 
-## ⚔️ Skenario 1: Remote Code Execution (RCE) Detection
-Simulasi serangan **Command Injection** melalui parameter URL pada aplikasi web yang rentan.
+## ⚔️ Security Simulation & Detection Analysis
 
-* **Attack Vector**: Eksekusi payload `cat /etc/passwd` menggunakan `curl` dari mesin penyerang.
-* **Impact**: Penyerang berhasil mendapatkan data sensitif user dari file `/etc/passwd`.
-* **Detection Logic**: Implementasi **Custom Rule (ID: 100005)** pada `local_rules.xml` untuk mendeteksi pembacaan file sistem via HTTP.
-* **Alert Analysis**: Wazuh menghasilkan Alert **Level 12** (High Severity) dengan detail payload serangan yang terekam sempurna.
+### 1. Remote Code Execution (RCE) - Command Injection
+Mendeteksi upaya eksekusi perintah sistem melalui parameter URL pada web server.
 
-![RCE Alert](img/wazuh-alert-rce-detail.png)
+* **Metode Serangan**: Mengirimkan payload `cat /etc/passwd` menggunakan `curl`.
+* **Hasil Eksploitasi**: Penyerang berhasil membaca data user sistem.
+* **Deteksi SOC**: Implementasi **Custom Rule ID: 100005** menghasilkan alert **Level 12 (High Severity)**.
+
+![RCE Detail](img/wazuh-alert-rce-detail.png)
 ![RCE Timeline](img/security-events-timeline(rce).png)
 
----
+### 2. Brute Force Attack - SSH
+Mendeteksi upaya login paksa menggunakan kamus password melalui protokol SSH.
 
-## 🔑 Skenario 2: SSH Brute Force Detection
-Mendeteksi upaya login paksa secara masif menggunakan alat **Hydra**.
+* **Metode Serangan**: Menggunakan **Hydra** untuk menyerang user `envy`.
+* **Analisis Alert**: Terdeteksi lonjakan kegagalan otentikasi (spike) pada dashboard.
+* **Detail Teknis**: Log menunjukkan kegagalan otentikasi pada level sistem (PAM).
 
-* **Attack Activity**: Penyerang melakukan ribuan percobaan login ke user `envy` dalam waktu singkat.
-* **Detection**: Terjadi lonjakan (*spike*) alert pada dashboard yang dipicu oleh kegagalan otentikasi berulang.
-* **Technical Detail**: Log menunjukkan kegagalan pada modul PAM dan percobaan login menggunakan user yang tidak terdaftar.
+![SSH Spike](img/wazuh-alert-ssh-timeline.png)
+![PAM Failure](img/ssh-pam-auth-failure.png)
 
-![SSH Brute Force Spike](img/wazuh-alert-ssh-timeline.png)
-![SSH Auth Failure Detail](img/ssh-pam-auth-failure.png)
+### 3. File Integrity Monitoring (FIM)
+Memantau perubahan dan penambahan file pada direktori web server secara instan.
 
----
-
-## 🔍 Skenario 3: File Integrity Monitoring (FIM)
-Memantau perubahan atau penambahan file pada direktori web server secara *real-time*.
-
-* **Configuration**: Mengaktifkan fitur `syscheck` dengan mode `realtime="yes"` pada direktori `/var/www/html/`.
-* **Activity**: Simulasi pembuatan file *backdoor* `test-fim.txt` oleh penyerang.
-* **Detection Result**: Wazuh secara instan mendeteksi event **"File added to the system" (Rule 554)** lengkap dengan detail file yang dibuat.
+* **Konfigurasi**: Mengaktifkan mode `realtime="yes"` pada direktori `/var/www/html/`.
+* **Skenario**: Deteksi pembuatan file mencurigakan `test-fim.txt` oleh penyerang.
+* **Hasil Deteksi**: Alert **Rule 554 (File added to the system)** terekam secara otomatis.
 
 ![FIM Alert](img/wazuh-fim-alert-added.png)
 
 ---
 
-## 🛠️ Konfigurasi Teknis
-Bukti konfigurasi manual yang dilakukan pada sisi Manager dan Agent:
-1. **Custom Detection Logic**: `wazuh-custom-rule-config.png`
-2. **Real-time FIM Config**: `wazuh-agent-fim-config.png`
+## ⚙️ Configuration & Scripts
+Detail teknis untuk mereplikasi lab ini tersedia di folder berikut:
+* [**configs/**](configs/): Berisi `local_rules.xml` (Logic Deteksi) dan `ossec.conf` (FIM Config).
+* [**scripts/**](scripts/): Berisi `vulnerable.php` (Vulnerability Simulation) dan `attack_commands.sh` (Attack Command List).
 
 ---
-**Created by**: Muhamad Yusril Malakaini
-**Year**: 2026
+**Author**: Muhamad Yusril Malakaini
+**Date**: February 2026
