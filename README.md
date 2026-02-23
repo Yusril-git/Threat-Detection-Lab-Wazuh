@@ -1,29 +1,52 @@
-🚀 Threat Detection Lab with Wazuh SIEM
-Repositori ini mendokumentasikan implementasi Wazuh SIEM/EDR untuk mendeteksi berbagai jenis serangan siber secara real-time di lingkungan virtual.
+# 🛡️ Threat Detection Lab with Wazuh SIEM/EDR
 
-🛠️ Environment Lab
-SIEM Manager: Wazuh Manager (Ubuntu 22.04) - IP 192.168.15.135
+Repositori ini mendokumentasikan implementasi dan simulasi deteksi ancaman keamanan siber menggunakan **Wazuh SIEM/EDR**. Proyek ini mencakup konfigurasi infrastruktur keamanan, pembuatan *custom detection rules*, dan analisis berbagai vektor serangan dalam lingkungan virtual.
 
-Target Server: Ubuntu 22.04 with Apache2 - IP 192.168.15.139
+## 🏗️ Environment Setup
+* **Wazuh Manager**: Ubuntu 22.04 (IP: `192.168.15.135`)
+* **Target Server (Agent)**: Ubuntu 22.04 with Apache Web Server (IP: `192.168.15.139`)
+* **Attacker Machine**: Kali Linux (IP: `192.168.15.138`)
 
-Attacker: Kali Linux - IP 192.168.15.138
+### Deployment Status
+Agent `lab-server` berhasil dideploy dan terhubung secara *real-time* ke SIEM Manager.
+![Agent Status](img/agent-active-status.png)
 
-🛡️ Skenario Deteksi
-1. Command Injection Detection (Web Attack)
-Mendeteksi upaya eksekusi perintah sistem melalui parameter URL pada web server yang rentan.
+---
 
-Rule ID: 100005 (Custom Rule)
+## ⚔️ Security Simulation & Detection Analysis
 
-Level: 12 (High Severity)
+### 1. Web-based Attack: Remote Code Execution (RCE)
+Simulasi serangan **Command Injection** dilakukan melalui parameter URL pada aplikasi web yang rentan.
 
-Analisis: Wazuh berhasil menangkap payload cat /etc/passwd yang dikirimkan oleh attacker melalui protokol HTTP.
+* **Attack Vector**: Penyerang mengirimkan payload `cat /etc/passwd` melalui parameter `?cmd=`.
+* **Detection Logic**: Dibuat *custom rule* (Rule ID: `100005`) untuk mendeteksi upaya pembacaan file sistem sensitif melalui log Apache.
+* **Wazuh Alert**: Terdeteksi Alert Level 12 (High Severity).
 
-2. Privilege Escalation & Root Activity
-Mendeteksi penggunaan perintah sudo oleh user yang mencoba melakukan aktivitas administratif di sistem.
+![RCE Detection](img/wazuh-alert-rce-detail.png)
 
-Event: Successful sudo to ROOT executed
+### 2. Authentication Attack: SSH Brute Force
+Simulasi upaya akses ilegal secara masal menggunakan metode **Brute Force** dengan alat **Hydra**.
 
-Analisis: Terdeteksi aktivitas pembuatan file mencurigakan hacked.txt di direktori /root/.
+* **Attack Vector**: Percobaan login otomatis ke user `envy` secara berulang.
+* **Detection**: Wazuh mendeteksi lonjakan kegagalan otentikasi (Authentication Failure) dan kegagalan modul PAM secara signifikan.
 
-3. SSH Brute Force Detection
-Mendeteksi upaya login paksa secara masal (Brute Force) menggunakan alat Hydra.
+![Brute Force Detection](img/wazuh-alert-ssh-timeline.png)
+
+### 3. Post-Exploitation: File Integrity Monitoring (FIM)
+Mendeteksi aktivitas mencurigakan pasca-eksploitasi, seperti pembuatan file *backdoor* atau perubahan file sistem.
+
+* **Mechanism**: Mengonfigurasi `syscheck` pada agent agar berjalan dalam mode **Real-time**.
+* **Result**: Wazuh berhasil mendeteksi penambahan file baru (`test-fim.txt`) di direktori `/var/www/html/` secara instan.
+
+![FIM Alert](img/wazuh-fim-event-list.png)
+
+---
+
+## ⚙️ Configuration Files
+Detail konfigurasi teknis yang digunakan dalam lab ini dapat dilihat pada folder:
+* `configs/local_rules.xml`: Logika deteksi custom untuk Command Injection.
+* `configs/ossec.conf`: Konfigurasi agent untuk FIM dan pembacaan log Apache.
+
+---
+**Author**: Muhamad Yusril Malakaini
+**Date**: February 2026
