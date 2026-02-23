@@ -30,7 +30,7 @@ Simulasi upaya akses ilegal secara masal menggunakan metode **Brute Force** deng
 * **Attack Vector**: Percobaan login otomatis ke user `envy` secara berulang.
 * **Detection**: Wazuh mendeteksi lonjakan kegagalan otentikasi (Authentication Failure) dan kegagalan modul PAM secara signifikan.
 
-![Brute Force Detection](img/wazuh-alert-ssh-timeline.png)
+![Brute Force Detection](img/wazuh-alert-ssh-timeline(rce).png)
 
 ### 3. Post-Exploitation: File Integrity Monitoring (FIM)
 Mendeteksi aktivitas mencurigakan pasca-eksploitasi, seperti pembuatan file *backdoor* atau perubahan file sistem.
